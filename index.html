@@ -619,7 +619,7 @@
   Synced to every device through this artifact link. <button id="resetBtn">Reset all overrides</button></p>
 </footer>
 
-<script type="application/json" id="app-data">{"overrides":{},"customItems":[]}</script>
+<script type="application/json" id="app-data">{"overrides":{"movie-it-was-just-an-accident":true},"customItems":[]}</script>
 <script id="app-script">
 function appMain(){
 const ITEMS = [
@@ -842,66 +842,634 @@ function setSyncStatus(text, isError){
   el._hideTimer = setTimeout(()=>{ el.classList.remove('show'); }, 3200);
 }
 
-function captureHead(){
-  const allowedTags = new Set(['META','TITLE','LINK','STYLE']);
-  return Array.from(document.head.children)
-    .filter(el=>allowedTags.has(el.tagName))
-    .map(el=>el.outerHTML)
-    .join('\n');
-}
-function captureBodyChildren(){
-  // Explicit allowlist, not a wholesale document.body clone — a broad clone
-  // would also sweep up anything the runtime or another script injected
-  // into the live DOM. Only these known elements are trusted.
-  const selectors = [
-    '.marquee', '.controls', '.legend', '#main', '#fabAdd',
-    '#addModalOverlay', '#syncStatus', 'footer'
-  ];
-  const frag = document.createDocumentFragment();
-  selectors.forEach(sel=>{
-    const el = document.querySelector(sel);
-    if(!el) return;
-    const clone = el.cloneNode(true);
-    if(clone.id === 'main' || clone.id === 'syncStatus'){
-      clone.innerHTML = ''; // rebuilt by render() on load
-    }
-    if(clone.classList && clone.classList.contains('legend')){
-      // legend is static; keep as-is
-    }
-    if(clone.classList && clone.classList.contains('controls')){
-      const chipRow = clone.querySelector('#chipRow');
-      if(chipRow) chipRow.innerHTML = ''; // rebuilt by renderChips() on load
-      const search = clone.querySelector('#search');
-      if(search) search.value = '';
-    }
-    if(clone.id === 'addModalOverlay') clone.classList.add('hidden');
-    if(clone.classList && clone.classList.contains('marquee')){
-      const stats = clone.querySelector('#stats');
-      if(stats) stats.innerHTML = ''; // rebuilt by render() on load
-      const bulbs = clone.querySelector('#bulbs');
-      if(bulbs) bulbs.innerHTML = ''; // rebuilt by appMain() on load
-    }
-    frag.appendChild(clone);
-  });
-  const dataScript = document.createElement('script');
-  dataScript.type = 'application/json';
-  dataScript.id = 'app-data';
-  dataScript.textContent = JSON.stringify({ overrides, customItems });
-  frag.appendChild(dataScript);
+// The head/body shell are embedded as static strings, not read back from
+// the live document. The runtime's own frame bootstrapping mutates the
+// real document.head/body after load (theme/CSP handling), so capturing
+// from the live DOM at persist time silently picked up the runtime's
+// substitutions instead of this app's own CSS and markup. These constants
+// are authored copies, generated from the same file, kept in sync by tooling.
+const HEAD_SOURCE = `<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Watchlist</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;0,9..144,700;1,9..144,500&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#151310;
+    --bg-2:#1c1914;
+    --paper:#f3ecd9;
+    --paper-2:#e9dfc4;
+    --ink:#221d15;
+    --ink-soft:#4a4234;
+    --rust:#b8452c;
+    --rust-dark:#8f3520;
+    --gold:#d7a542;
+    --teal:#3f6357;
+    --muted:#948a6f;
+    --line: rgba(34,29,21,0.18);
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:
+      radial-gradient(circle at 15% 0%, rgba(216,165,66,0.08), transparent 40%),
+      radial-gradient(circle at 85% 10%, rgba(184,69,44,0.08), transparent 45%),
+      var(--bg);
+    color:var(--paper);
+    font-family:'Inter', sans-serif;
+    -webkit-font-smoothing:antialiased;
+    min-height:100vh;
+    padding-bottom:80px;
+  }
+  ::selection{ background:var(--rust); color:var(--paper); }
 
-  const appScript = document.createElement('script');
-  appScript.id = 'app-script';
-  appScript.textContent = appMain.toString() + '\nappMain();';
-  frag.appendChild(appScript);
+  /* ---------- Marquee header ---------- */
+  .marquee{
+    position:relative;
+    padding:38px 20px 30px;
+    text-align:center;
+    border-bottom:1px solid rgba(243,236,217,0.12);
+    background:linear-gradient(180deg, rgba(216,165,66,0.05), transparent);
+  }
+  .marquee-bulbs{
+    display:flex; justify-content:center; gap:7px; margin-bottom:18px;
+  }
+  .bulb{
+    width:6px; height:6px; border-radius:50%;
+    background:var(--gold);
+    box-shadow:0 0 6px 1px rgba(216,165,66,0.9);
+    animation:flicker 2.6s infinite ease-in-out;
+  }
+  .bulb:nth-child(3n+1){animation-delay:.2s;}
+  .bulb:nth-child(3n+2){animation-delay:.7s;}
+  .bulb:nth-child(3n){animation-delay:1.3s;}
+  @keyframes flicker{
+    0%,100%{opacity:1;}
+    50%{opacity:.35;}
+  }
+  .eyebrow{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:11px;
+    letter-spacing:.28em;
+    text-transform:uppercase;
+    color:var(--gold);
+    margin:0 0 10px;
+  }
+  h1.title{
+    font-family:'Fraunces', serif;
+    font-weight:700;
+    font-size:clamp(34px, 9vw, 58px);
+    line-height:1;
+    margin:0;
+    letter-spacing:-.01em;
+  }
+  .title em{
+    font-style:italic;
+    font-weight:500;
+    color:var(--rust);
+  }
+  .subtitle{
+    font-family:'Inter', sans-serif;
+    color:var(--muted);
+    font-size:14.5px;
+    max-width:440px;
+    margin:14px auto 0;
+    line-height:1.5;
+  }
+  .stats{
+    margin-top:20px;
+    display:flex; justify-content:center; gap:22px;
+    font-family:'IBM Plex Mono', monospace;
+    font-size:12px;
+    color:var(--paper);
+  }
+  .stats b{ color:var(--gold); font-size:15px; display:block; font-weight:600; }
+  .stats span{ display:block; color:var(--muted); margin-top:2px; }
 
-  const wrap = document.createElement('div');
-  wrap.appendChild(frag);
-  return wrap.innerHTML;
-}
+  /* ---------- Controls ---------- */
+  .controls{
+    position:sticky; top:0; z-index:20;
+    background:rgba(21,19,16,0.92);
+    backdrop-filter:blur(10px);
+    border-bottom:1px solid rgba(243,236,217,0.12);
+    padding:14px 16px;
+  }
+  .controls-inner{ max-width:900px; margin:0 auto; }
+  .search-row{ display:flex; gap:8px; margin-bottom:10px; }
+  #search{
+    flex:1;
+    background:var(--bg-2);
+    border:1px solid rgba(243,236,217,0.18);
+    color:var(--paper);
+    border-radius:10px;
+    padding:11px 14px;
+    font-family:'Inter', sans-serif;
+    font-size:14.5px;
+    outline:none;
+  }
+  #search::placeholder{ color:var(--muted); }
+  #search:focus{ border-color:var(--gold); }
+
+  .type-toggle{ display:flex; gap:6px; }
+  .type-toggle button{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:11.5px;
+    letter-spacing:.05em;
+    text-transform:uppercase;
+    background:var(--bg-2);
+    color:var(--muted);
+    border:1px solid rgba(243,236,217,0.18);
+    border-radius:10px;
+    padding:0 14px;
+    cursor:pointer;
+  }
+  .type-toggle button.active{
+    background:var(--rust);
+    border-color:var(--rust);
+    color:var(--paper);
+  }
+
+  .chip-row{
+    display:flex; flex-wrap:wrap; gap:7px; margin-bottom:10px;
+  }
+  .chip{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:11px;
+    letter-spacing:.02em;
+    padding:6px 12px;
+    border-radius:999px;
+    border:1px solid rgba(243,236,217,0.2);
+    background:transparent;
+    color:var(--muted);
+    cursor:pointer;
+    white-space:nowrap;
+  }
+  .chip.active{
+    background:var(--gold);
+    border-color:var(--gold);
+    color:var(--ink);
+    font-weight:600;
+  }
+
+  .toggle-row{
+    display:flex; align-items:center; justify-content:space-between;
+    font-family:'IBM Plex Mono', monospace;
+    font-size:11px;
+    color:var(--muted);
+  }
+  .watch-toggle{ display:flex; gap:6px; }
+  .watch-toggle button{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:11px;
+    letter-spacing:.03em;
+    background:var(--bg-2);
+    color:var(--muted);
+    border:1px solid rgba(243,236,217,0.18);
+    border-radius:8px;
+    padding:4px 10px;
+    cursor:pointer;
+  }
+  .watch-toggle button.active{
+    background:var(--teal);
+    border-color:var(--teal);
+    color:var(--paper);
+  }
+
+  /* ---------- Legend ---------- */
+  .legend{
+    max-width:900px; margin:16px auto 0; padding:0 16px;
+    font-family:'IBM Plex Mono', monospace;
+    font-size:11px; color:var(--muted);
+    display:flex; flex-wrap:wrap; gap:14px;
+  }
+  .legend span{ white-space:nowrap; }
+
+  /* ---------- Main content ---------- */
+  main{ max-width:900px; margin:0 auto; padding:26px 16px 10px; }
+
+  .type-section{ margin-bottom:10px; }
+  .type-heading{
+    font-family:'Fraunces', serif;
+    font-style:italic;
+    font-weight:600;
+    font-size:26px;
+    color:var(--gold);
+    margin:36px 0 4px;
+    display:flex;
+    align-items:baseline;
+    gap:10px;
+  }
+  .type-heading .count{
+    font-family:'IBM Plex Mono', monospace;
+    font-style:normal;
+    font-size:12px;
+    color:var(--muted);
+  }
+  .type-rule{
+    height:1px;
+    background:repeating-linear-gradient(90deg, rgba(243,236,217,0.25) 0 6px, transparent 6px 12px);
+    margin-bottom:22px;
+  }
+
+  .cat-heading{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:11.5px;
+    letter-spacing:.14em;
+    text-transform:uppercase;
+    color:var(--paper);
+    margin:26px 0 12px;
+    display:flex; align-items:center; gap:9px;
+  }
+  .cat-heading::before{
+    content:''; width:16px; height:1px; background:var(--rust);
+  }
+  .cat-heading.watched-heading{ color:var(--muted); }
+  .cat-heading.watched-heading::before{ background:var(--muted); }
+
+  .grid{
+    display:grid;
+    grid-template-columns:1fr;
+    gap:10px;
+  }
+  @media (min-width:640px){
+    .grid{ grid-template-columns:1fr 1fr; }
+  }
+
+  /* ---------- Ticket card ---------- */
+  .card{
+    position:relative;
+    display:flex;
+    background:var(--paper);
+    border-radius:10px;
+    overflow:hidden;
+    box-shadow:0 2px 0 rgba(0,0,0,0.15);
+    transition:box-shadow .12s ease;
+  }
+  .card:hover{ box-shadow:0 4px 14px rgba(0,0,0,0.3); }
+
+  .stub{
+    flex:0 0 46px;
+    background:var(--paper-2);
+    border-right:2px dashed rgba(34,29,21,0.28);
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    gap:6px;
+    padding:8px 0;
+    position:relative;
+  }
+  .stub::before, .stub::after{
+    content:''; position:absolute; width:12px; height:12px; border-radius:50%;
+    background:var(--bg);
+    left:40px;
+  }
+  .stub::before{ top:-6px; }
+  .stub::after{ bottom:-6px; }
+  .stub-icon{ font-size:17px; line-height:1; }
+  .stub-label{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:9px;
+    letter-spacing:.15em;
+    color:var(--ink-soft);
+    writing-mode:vertical-rl;
+    transform:rotate(180deg);
+  }
+
+  .card-body{
+    flex:1;
+    padding:12px 14px 13px 14px;
+    min-width:0;
+  }
+  .card-top{
+    display:flex; align-items:flex-start; justify-content:space-between; gap:8px;
+  }
+  .card-title{
+    font-family:'Fraunces', serif;
+    font-weight:600;
+    font-size:16px;
+    color:var(--ink);
+    line-height:1.22;
+  }
+  .card-title a{
+    color:inherit;
+    text-decoration:none;
+    background-image:linear-gradient(var(--rust), var(--rust));
+    background-repeat:no-repeat;
+    background-position:0 100%;
+    background-size:0% 1.5px;
+    transition:background-size .15s ease;
+  }
+  .card-title a:hover, .card-title a:focus-visible{
+    background-size:100% 1.5px;
+  }
+  .card-tag{
+    flex:0 0 auto;
+    font-size:13px;
+    line-height:1;
+    margin-top:2px;
+  }
+  .card-desc{
+    font-family:'Inter', sans-serif;
+    font-size:12.5px;
+    color:var(--ink-soft);
+    line-height:1.45;
+    margin-top:5px;
+  }
+  .card-meta{
+    margin-top:8px;
+    display:flex; align-items:center; justify-content:space-between;
+  }
+  .card-cat{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:9.5px;
+    letter-spacing:.08em;
+    text-transform:uppercase;
+    color:var(--rust);
+  }
+  .watch-btn{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:9.5px;
+    letter-spacing:.05em;
+    text-transform:uppercase;
+    color:var(--muted);
+    border:1px solid rgba(34,29,21,0.25);
+    border-radius:6px;
+    padding:4px 8px;
+    background:transparent;
+    cursor:pointer;
+    transition:transform .1s ease;
+  }
+  .watch-btn:hover{ border-color:var(--teal); color:var(--teal); }
+  .watch-btn:active{ transform:scale(0.94); }
+  .rt-score{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:10px;
+    font-weight:600;
+    letter-spacing:.02em;
+    padding:2px 6px;
+    border-radius:6px;
+    white-space:nowrap;
+  }
+  .rt-score.score-hi{ background:rgba(63,99,87,0.18); color:var(--teal); }
+  .rt-score.score-mid{ background:rgba(216,165,66,0.2); color:#8a6a1f; }
+  .rt-score.score-lo{ background:rgba(184,69,44,0.16); color:var(--rust-dark); }
+
+
+  .card.watched{
+    filter:grayscale(0.55);
+  }
+  .card.watched .card-body{ opacity:.68; }
+  .card.watched .watch-btn{
+    background:var(--teal); color:var(--paper); border-color:var(--teal);
+  }
+  .stamp{
+    position:absolute;
+    top:8px; right:10px;
+    font-family:'IBM Plex Mono', monospace;
+    font-size:10px;
+    font-weight:600;
+    letter-spacing:.12em;
+    color:var(--rust);
+    border:1.5px solid var(--rust);
+    border-radius:4px;
+    padding:2px 6px;
+    transform:rotate(9deg);
+    opacity:.85;
+    pointer-events:none;
+  }
+
+  .empty-msg{
+    font-family:'IBM Plex Mono', monospace;
+    color:var(--muted);
+    font-size:13px;
+    text-align:center;
+    padding:50px 10px;
+  }
+
+  footer{
+    max-width:900px; margin:40px auto 0; padding:20px 16px 0;
+    border-top:1px solid rgba(243,236,217,0.12);
+    text-align:center;
+  }
+  footer p{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:11px;
+    color:var(--muted);
+    line-height:1.7;
+  }
+  footer button{
+    background:none; border:none; color:var(--rust);
+    font-family:'IBM Plex Mono', monospace;
+    font-size:11px;
+    text-decoration:underline;
+    cursor:pointer;
+    padding:0;
+  }
+
+  /* ---------- FAB + Add-title modal ---------- */
+  .fab{
+    position:fixed;
+    right:20px; bottom:24px;
+    width:52px; height:52px;
+    border-radius:50%;
+    background:var(--rust);
+    color:var(--paper);
+    border:none;
+    font-size:26px;
+    line-height:1;
+    box-shadow:0 4px 16px rgba(0,0,0,0.4);
+    cursor:pointer;
+    z-index:30;
+  }
+  .fab:active{ transform:scale(0.94); }
+
+
+  .modal-overlay{
+    position:fixed; inset:0; z-index:40;
+    background:rgba(10,9,7,0.72);
+    backdrop-filter:blur(3px);
+    display:flex; align-items:flex-end; justify-content:center;
+  }
+  .hidden{ display:none !important; }
+  @media (min-width:640px){
+    .modal-overlay{ align-items:center; }
+  }
+  .modal{
+    width:100%; max-width:480px;
+    max-height:88vh;
+    overflow-y:auto;
+    background:var(--paper);
+    border-radius:16px 16px 0 0;
+    padding:0 0 18px;
+  }
+  @media (min-width:640px){
+    .modal{ border-radius:16px; }
+  }
+  .modal-header{
+    display:flex; align-items:center; justify-content:space-between;
+    padding:16px 18px;
+    border-bottom:1px dashed rgba(34,29,21,0.2);
+    font-family:'Fraunces', serif;
+    font-weight:600;
+    font-size:18px;
+    color:var(--ink);
+    position:sticky; top:0; background:var(--paper);
+  }
+  .modal-close{
+    background:none; border:none; font-size:22px; line-height:1;
+    color:var(--ink-soft); cursor:pointer; padding:4px;
+  }
+  .modal-body{ padding:14px 18px 0; }
+  .modal-label{
+    display:block;
+    font-family:'IBM Plex Mono', monospace;
+    font-size:10.5px;
+    letter-spacing:.06em;
+    text-transform:uppercase;
+    color:var(--ink-soft);
+    margin:14px 0 5px;
+  }
+  .modal-body input[type="text"],
+  .modal-body input[type="number"],
+  .modal-body select,
+  .modal-body textarea{
+    width:100%;
+    font-family:'Inter', sans-serif;
+    font-size:14.5px;
+    color:var(--ink);
+    background:var(--paper-2);
+    border:1px solid rgba(34,29,21,0.2);
+    border-radius:8px;
+    padding:9px 11px;
+    resize:vertical;
+  }
+  .modal-check{
+    display:flex; align-items:center; gap:8px;
+    font-family:'Inter', sans-serif;
+    font-size:13.5px;
+    color:var(--ink);
+    margin-top:14px;
+  }
+  .modal-btn{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:12px;
+    letter-spacing:.04em;
+    text-transform:uppercase;
+    padding:10px 16px;
+    border-radius:8px;
+    border:1px solid rgba(34,29,21,0.25);
+    background:transparent;
+    color:var(--ink);
+    cursor:pointer;
+    margin-top:14px;
+  }
+  .modal-btn.primary{
+    background:var(--rust); border-color:var(--rust); color:var(--paper);
+  }
+  .modal-actions{ display:flex; gap:10px; }
+  .modal-actions .modal-btn{ flex:1; }
+  .modal-status{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:12px;
+    color:var(--ink-soft);
+    margin-top:10px;
+  }
+  .modal-status.error{ color:var(--rust-dark); }
+  .sync-toast{
+    position:fixed; left:50%; bottom:24px; transform:translateX(-50%) translateY(20px);
+    background:var(--ink); color:var(--paper);
+    font-family:'IBM Plex Mono', monospace; font-size:11.5px;
+    padding:8px 14px; border-radius:999px;
+    opacity:0; pointer-events:none;
+    transition:opacity .2s ease, transform .2s ease;
+    z-index:50;
+    max-width:80vw; text-align:center;
+  }
+  .sync-toast.show{ opacity:1; transform:translateX(-50%) translateY(0); }
+  .sync-toast.error{ background:var(--rust-dark); }
+
+</style>`;
+const BODY_SHELL_SOURCE = `
+<div class="marquee">
+  <div class="marquee-bulbs" id="bulbs"></div>
+  <p class="eyebrow">Now Booking &middot; A Personal Repertory</p>
+  <h1 class="title">The <em>Watchlist</em></h1>
+  <p class="subtitle">Every film and show on the list, sorted into a proper program. Films are ranked by Rotten Tomatoes score within each genre. Tap "mark seen" on any ticket to check it off — the seen ones sink to the bottom of their section.</p>
+  <div class="stats" id="stats"></div>
+</div>
+
+<div class="controls">
+  <div class="controls-inner">
+    <div class="search-row">
+      <input id="search" type="text" placeholder="Search the marquee…" autocomplete="off">
+      <div class="type-toggle" id="typeToggle">
+        <button data-type="movie" class="active">Film</button>
+        <button data-type="tv">TV</button>
+      </div>
+    </div>
+    <div class="chip-row" id="chipRow"></div>
+    <div class="toggle-row">
+      <div class="watch-toggle" id="watchToggle">
+        <button data-watch="all" class="active">All</button>
+        <button data-watch="watched">Watched</button>
+        <button data-watch="unwatched">Unwatched</button>
+      </div>
+      <span id="filterCount"></span>
+    </div>
+  </div>
+</div>
+
+<div class="legend">
+  <span>🍅 Rotten Tomatoes score — films ranked highest to lowest within each genre</span>
+  <span>~ maybe already seen, unsure</span>
+  <span>$ rental / purchase only</span>
+  <span>tap "mark seen" to toggle watched</span>
+  <span>tap a title to search it on Google</span>
+</div>
+
+<main id="main"></main>
+
+<button id="fabAdd" class="fab" aria-label="Add a title">+</button>
+<div id="addModalOverlay" class="modal-overlay hidden">
+  <div class="modal">
+    <div class="modal-header">
+      <span>Add a title</span>
+      <button id="closeModal" class="modal-close" aria-label="Close">&times;</button>
+    </div>
+    <div class="modal-body">
+      <label class="modal-label">Movie or show name</label>
+      <input id="pvTitle" type="text" placeholder="e.g. Mulholland Drive" autocomplete="off">
+      <label class="modal-label">Type</label>
+      <select id="pvType">
+        <option value="movie">Film</option>
+        <option value="tv">TV</option>
+      </select>
+      <label class="modal-label">Genre</label>
+      <select id="pvCat"></select>
+      <label class="modal-label">Description</label>
+      <textarea id="pvDesc" rows="2"></textarea>
+      <label class="modal-label">Rotten Tomatoes score (leave blank if none)</label>
+      <input id="pvScore" type="number" min="0" max="100" placeholder="e.g. 83">
+      <label class="modal-check"><input type="checkbox" id="pvWatched"> Already watched</label>
+      <div id="dupWarning" class="modal-status hidden">This title looks like it's already on your list.</div>
+      <div class="modal-actions">
+        <button id="addConfirmBtn" class="modal-btn primary">Add to list</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="syncStatus" class="sync-toast"></div>
+
+<footer>
+  <p><span id="footerCount">173</span> titles, one increasingly opinionated watchlist.<br>
+  Synced to every device through this artifact link. <button id="resetBtn">Reset all overrides</button></p>
+</footer>
+`;
 function buildHTML(){
-  const headHTML = captureHead();
-  const bodyHTML = captureBodyChildren();
-  return '<!doctype html>\n<html lang="en">\n<head>\n' + headHTML + '\n</head>\n<body>\n' + bodyHTML + '\n</body>\n</html>';
+  const dataJSON = JSON.stringify({ overrides, customItems });
+  const appScriptSrc = appMain.toString() + '\nappMain();';
+  return '<!doctype html>\n<html lang="en">\n<head>\n' + HEAD_SOURCE + '\n</head>\n<body>\n' + BODY_SHELL_SOURCE
+    + '\n<script type="application/json" id="app-data">' + dataJSON + '<\/script>\n'
+    + '<script id="app-script">' + appScriptSrc + '<\/script>\n</body>\n</html>';
 }
 async function persist(){
   if(!(window.claude && window.claude.use)){
