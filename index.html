@@ -365,19 +365,6 @@
   .rt-score.score-mid{ background:rgba(216,165,66,0.2); color:#8a6a1f; }
   .rt-score.score-lo{ background:rgba(184,69,44,0.16); color:var(--rust-dark); }
 
-  .stream-row{ margin-top:7px; }
-  .stream-badge{
-    font-family:'IBM Plex Mono', monospace;
-    font-size:10px;
-    font-weight:600;
-    letter-spacing:.02em;
-    padding:2px 7px;
-    border-radius:6px;
-    white-space:nowrap;
-    display:inline-block;
-  }
-  .stream-badge.on{ background:rgba(63,99,87,0.18); color:var(--teal); }
-  .stream-badge.rent{ background:rgba(148,138,111,0.2); color:var(--ink-soft); }
 
   .card.watched{
     filter:grayscale(0.55);
@@ -446,17 +433,7 @@
     z-index:30;
   }
   .fab:active{ transform:scale(0.94); }
-  .fab-secondary{
-    right:20px; bottom:86px;
-    width:46px; height:46px;
-    font-size:19px;
-    background:var(--teal);
-  }
 
-  .stream-attribution{
-    font-family:'IBM Plex Mono', monospace; font-size:10.5px; color:var(--ink-soft);
-    line-height:1.6; margin-top:16px;
-  }
 
   .modal-overlay{
     position:fixed; inset:0; z-index:40;
@@ -549,6 +526,19 @@
     margin-top:10px;
   }
   .modal-status.error{ color:var(--rust-dark); }
+  .sync-toast{
+    position:fixed; left:50%; bottom:24px; transform:translateX(-50%) translateY(20px);
+    background:var(--ink); color:var(--paper);
+    font-family:'IBM Plex Mono', monospace; font-size:11.5px;
+    padding:8px 14px; border-radius:999px;
+    opacity:0; pointer-events:none;
+    transition:opacity .2s ease, transform .2s ease;
+    z-index:50;
+    max-width:80vw; text-align:center;
+  }
+  .sync-toast.show{ opacity:1; transform:translateX(-50%) translateY(0); }
+  .sync-toast.error{ background:var(--rust-dark); }
+
 </style>
 </head>
 <body>
@@ -584,7 +574,6 @@
 
 <div class="legend">
   <span>🍅 Rotten Tomatoes score — films ranked highest to lowest within each genre</span>
-  <span>📺 current streamer, checked on demand</span>
   <span>~ maybe already seen, unsure</span>
   <span>$ rental / purchase only</span>
   <span>tap "mark seen" to toggle watched</span>
@@ -593,25 +582,7 @@
 
 <main id="main"></main>
 
-<button id="fabStream" class="fab fab-secondary" aria-label="Check streaming availability">📡</button>
 <button id="fabAdd" class="fab" aria-label="Add a title">+</button>
-
-<div id="streamModalOverlay" class="modal-overlay hidden">
-  <div class="modal">
-    <div class="modal-header">
-      <span>Check streaming</span>
-      <button id="closeStreamModal" class="modal-close" aria-label="Close">&times;</button>
-    </div>
-    <div class="modal-body">
-      <div id="streamStatus" class="modal-status"></div>
-      <div class="modal-actions">
-        <button id="checkNowBtn" class="modal-btn primary">Check now</button>
-      </div>
-      <p class="stream-attribution">Looks up each title's current US streaming platform using web search, run on demand — this isn't a live database, so it can take a few minutes for the full list and occasionally miss or misjudge a title. Tap "Check now" anytime you want a fresh read; nothing runs automatically in the background.</p>
-    </div>
-  </div>
-</div>
-
 <div id="addModalOverlay" class="modal-overlay hidden">
   <div class="modal">
     <div class="modal-header">
@@ -619,45 +590,38 @@
       <button id="closeModal" class="modal-close" aria-label="Close">&times;</button>
     </div>
     <div class="modal-body">
-      <div id="modalStep1">
-        <label class="modal-label">Movie or show name</label>
-        <input id="addTitleInput" type="text" placeholder="e.g. Mulholland Drive" autocomplete="off">
-        <button id="lookupBtn" class="modal-btn primary">Look it up</button>
-        <div id="lookupStatus" class="modal-status"></div>
-      </div>
-      <div id="modalStep2" class="hidden">
-        <label class="modal-label">Title</label>
-        <input id="pvTitle" type="text">
-        <label class="modal-label">Type</label>
-        <select id="pvType">
-          <option value="movie">Film</option>
-          <option value="tv">TV</option>
-        </select>
-        <label class="modal-label">Genre</label>
-        <select id="pvCat"></select>
-        <label class="modal-label">Description</label>
-        <textarea id="pvDesc" rows="2"></textarea>
-        <label class="modal-label">Rotten Tomatoes score (leave blank if none)</label>
-        <input id="pvScore" type="number" min="0" max="100" placeholder="e.g. 83">
-        <label class="modal-check"><input type="checkbox" id="pvWatched"> Already watched</label>
-        <div id="dupWarning" class="modal-status hidden">This title looks like it's already on your list.</div>
-        <div class="modal-actions">
-          <button id="addConfirmBtn" class="modal-btn primary">Add to list</button>
-          <button id="lookupAgainBtn" class="modal-btn">Search again</button>
-        </div>
+      <label class="modal-label">Movie or show name</label>
+      <input id="pvTitle" type="text" placeholder="e.g. Mulholland Drive" autocomplete="off">
+      <label class="modal-label">Type</label>
+      <select id="pvType">
+        <option value="movie">Film</option>
+        <option value="tv">TV</option>
+      </select>
+      <label class="modal-label">Genre</label>
+      <select id="pvCat"></select>
+      <label class="modal-label">Description</label>
+      <textarea id="pvDesc" rows="2"></textarea>
+      <label class="modal-label">Rotten Tomatoes score (leave blank if none)</label>
+      <input id="pvScore" type="number" min="0" max="100" placeholder="e.g. 83">
+      <label class="modal-check"><input type="checkbox" id="pvWatched"> Already watched</label>
+      <div id="dupWarning" class="modal-status hidden">This title looks like it's already on your list.</div>
+      <div class="modal-actions">
+        <button id="addConfirmBtn" class="modal-btn primary">Add to list</button>
       </div>
     </div>
   </div>
 </div>
 
+<div id="syncStatus" class="sync-toast"></div>
+
 <footer>
-  <p>173 titles, one increasingly opinionated watchlist.<br>
-  Watched status you toggle here is saved to this artifact for next time. <button id="resetBtn">Reset all overrides</button></p>
+  <p><span id="footerCount">173</span> titles, one increasingly opinionated watchlist.<br>
+  Synced to every device through this artifact link. <button id="resetBtn">Reset all overrides</button></p>
 </footer>
 
-<script>
-/* ---------------- Data ---------------- */
-/* y: type (tv/movie) · c: category · t: title · d: description · w: watched by default · g: tag (fire/tilde/dollar/null) */
+<script type="application/json" id="app-data">{"overrides":{},"customItems":[]}</script>
+<script id="app-script">
+function appMain(){
 const ITEMS = [
 // ---------------- TV ----------------
 {y:"tv", c:"Sci-Fi", t:"Westworld", d:"Android hosts gain consciousness inside a lawless Wild West theme park.", w:false, g:null},
@@ -854,237 +818,110 @@ let overrides = {};
 let customItems = [];
 let state = { type:"movie", cat:"all", q:"", watch:"all" };
 
-let streamCache = {};      // { "<type>-<slug>": {primary, kind:'flatrate'|'rent'|'none', checked} }
-let streamLastCheck = null; // epoch ms
-let streamChecking = false;
-
 function allItems(){ return ITEMS.concat(customItems); }
-
-async function loadCustomItems(){
-  try{
-    const res = await window.storage.get('watchlist-custom-items');
-    customItems = res && res.value ? JSON.parse(res.value) : [];
-  }catch(e){ customItems = []; }
-}
-async function saveCustomItems(){
-  try{ await window.storage.set('watchlist-custom-items', JSON.stringify(customItems)); }
-  catch(e){ /* storage unavailable, still works this session */ }
-}
-
-async function loadStreamState(){
-  try{
-    const c = await window.storage.get('watchlist-stream-cache');
-    streamCache = c && c.value ? JSON.parse(c.value) : {};
-  }catch(e){ streamCache = {}; }
-  try{
-    const s = await window.storage.get('watchlist-stream-lastcheck');
-    streamLastCheck = s && s.value ? parseInt(s.value, 10) : null;
-  }catch(e){ streamLastCheck = null; }
-}
-async function saveStreamCache(){
-  try{ await window.storage.set('watchlist-stream-cache', JSON.stringify(streamCache)); }catch(e){}
-}
-async function saveStreamLastCheck(){
-  streamLastCheck = Date.now();
-  try{ await window.storage.set('watchlist-stream-lastcheck', String(streamLastCheck)); }catch(e){}
-}
 
 function slug(t){ return t.toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/(^-|-$)/g,''); }
 function isWatched(item){
   const k = slug(item.y+'-'+item.t);
   return overrides.hasOwnProperty(k) ? overrides[k] : item.w;
 }
-async function loadOverrides(){
-  try{
-    const res = await window.storage.get('watchlist-overrides');
-    overrides = res && res.value ? JSON.parse(res.value) : {};
-  }catch(e){ overrides = {}; }
-}
-async function saveOverrides(){
-  try{ await window.storage.set('watchlist-overrides', JSON.stringify(overrides)); }
-  catch(e){ /* storage unavailable, state still works this session */ }
-}
-async function toggleWatched(item){
+function toggleWatched(item){
   const k = slug(item.y+'-'+item.t);
   overrides[k] = !isWatched(item);
-  await saveOverrides();
   render();
+  persist();
 }
 
-/* ---------------- AI title lookup ---------------- */
-async function lookupTitle(query){
-  const catList = MOVIE_CATS.concat(TV_CATS.filter(c=>!MOVIE_CATS.includes(c))).join(', ');
-  const prompt = `You are cataloging one entry for a personal movie/TV watchlist app. Use web search to find accurate, current information about this title: "${query}".
-
-Determine:
-1. "title": the correct, official title (fix typos/casing, don't add the year).
-2. "type": either "movie" or "tv" — "tv" means a series with multiple episodes/seasons (including anthology/limited series), "movie" means a single film (including documentaries, concert films, and stand-up specials).
-3. "category": pick exactly ONE best-fit value from this list: ${catList}. Use "Sci-Fi" and "Reality" only for type "tv". Use "LGBTQ" only if the story centers on queer characters/relationships.
-4. "description": a single spoiler-free sentence, 6-14 words, plain editorial style (e.g. "A ruthless oilman builds an empire in early-1900s California."). No quotes, no title repetition.
-5. "score": the current Rotten Tomatoes Tomatometer critic score as an integer 0-100, or null if it has none.
-6. "found": true if you are confident you identified the correct title, false otherwise.
-
-Respond with ONLY raw JSON, no markdown code fences, no commentary, in exactly this shape:
-{"title":"...","type":"movie","category":"...","description":"...","score":83,"found":true}`;
-
-  const response = await fetch("https://api.anthropic.com/v1/messages", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      model: "claude-sonnet-4-6",
-      max_tokens: 1000,
-      messages: [{ role: "user", content: prompt }],
-      tools: [{ type: "web_search_20250305", name: "web_search" }]
-    })
-  });
-  const data = await response.json();
-  const textBlocks = (data.content || []).filter(b => b.type === 'text').map(b => b.text);
-  const combined = textBlocks.join('\n').trim();
-  const cleaned = combined.replace(/```json|```/g, '').trim();
-  const start = cleaned.indexOf('{');
-  const end = cleaned.lastIndexOf('}');
-  if(start === -1 || end === -1) throw new Error('No JSON in response');
-  const parsed = JSON.parse(cleaned.slice(start, end+1));
-  return parsed;
-}
-
-/* ---------------- Streaming lookup (via Claude + web search) ---------------- */
-async function lookupStreamingBatch(items){
-  const list = items.map((it,idx)=>`${idx+1}. "${it.t}" (${it.y==='tv'?'TV show':'movie'})`).join('\n');
-  const prompt = `For each numbered title below, use web search to find its CURRENT primary streaming platform in the United States.
-
-${list}
-
-For each title return:
-- "title": the exact title as given above
-- "primary": the single most prominent subscription streaming service it's currently on (e.g. "Netflix", "Max", "Hulu", "Prime Video", "Disney+", "Apple TV+", "Peacock", "Paramount+", "Mubi", "Criterion Channel", "Tubi"), or null if it's not on any subscription service
-- "kind": "flatrate" if available via subscription, "rent" if only available to rent/buy (no subscription), "none" if not currently available anywhere
-
-Respond with ONLY a raw JSON array, no markdown fences, no commentary, with exactly ${items.length} objects in the same order as the list above, shaped like:
-[{"title":"...","primary":"Netflix","kind":"flatrate"}]`;
-
-  const response = await fetch("https://api.anthropic.com/v1/messages", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      model: "claude-sonnet-4-6",
-      max_tokens: 8000,
-      messages: [{ role: "user", content: prompt }],
-      tools: [{ type: "web_search_20250305", name: "web_search" }]
-    })
-  });
-  let data;
-  try{ data = await response.json(); }
-  catch(e){ const err = new Error(`HTTP ${response.status}: response wasn't valid JSON`); err.status = response.status; throw err; }
-
-  if(!response.ok || data.type === 'error'){
-    const apiMsg = (data.error && data.error.message) ? data.error.message : JSON.stringify(data).slice(0,200);
-    const err = new Error(`API error (HTTP ${response.status}): ${apiMsg}`);
-    err.status = response.status;
-    throw err;
-  }
-  if(data.stop_reason === 'max_tokens'){
-    throw new Error('Response got cut off (hit max_tokens) before finishing the batch');
-  }
-
-  const textBlocks = (data.content || []).filter(b => b.type === 'text').map(b => b.text);
-  const combined = textBlocks.join('\n').trim();
-  if(!combined){
-    throw new Error(`No text in response (stop_reason: ${data.stop_reason || 'unknown'})`);
-  }
-  const cleaned = combined.replace(/```json|```/g, '').trim();
-  const start = cleaned.indexOf('[');
-  const end = cleaned.lastIndexOf(']');
-  if(start === -1 || end === -1) throw new Error(`No JSON array found in reply: "${cleaned.slice(0,150)}"`);
-  return JSON.parse(cleaned.slice(start, end+1));
-}
-
-function setStreamStatus(text, isError){
-  const el = document.getElementById('streamStatus');
+/* ---------------- Sync (save via the artifact capability) ---------------- */
+function setSyncStatus(text, isError){
+  const el = document.getElementById('syncStatus');
   if(!el) return;
   el.textContent = text;
-  el.className = 'modal-status' + (isError ? ' error' : '');
-}
-function lastCheckLabel(){
-  if(!streamLastCheck) return 'Never checked yet.';
-  const mins = Math.round((Date.now() - streamLastCheck) / 60000);
-  if(mins < 1) return 'Last checked just now.';
-  if(mins < 60) return `Last checked ${mins} min ago.`;
-  const hrs = Math.round(mins/60);
-  if(hrs < 24) return `Last checked ${hrs}h ago.`;
-  const days = Math.round(hrs/24);
-  return `Last checked ${days}d ago.`;
+  el.className = 'sync-toast' + (isError ? ' error' : '') + ' show';
+  clearTimeout(el._hideTimer);
+  el._hideTimer = setTimeout(()=>{ el.classList.remove('show'); }, 3200);
 }
 
-async function checkStreaming(){
-  if(streamChecking) return;
-  streamChecking = true;
-  const STALE_MS = 30*24*60*60*1000; // 30 days
-  const allI = allItems();
-  const items = allI.filter(item=>{
-    const c = streamCache[slug(item.y+'-'+item.t)];
-    return !c || (Date.now() - c.checked) > STALE_MS;
+function captureHead(){
+  const allowedTags = new Set(['META','TITLE','LINK','STYLE']);
+  return Array.from(document.head.children)
+    .filter(el=>allowedTags.has(el.tagName))
+    .map(el=>el.outerHTML)
+    .join('\n');
+}
+function captureBodyChildren(){
+  // Explicit allowlist, not a wholesale document.body clone — a broad clone
+  // would also sweep up anything the runtime or another script injected
+  // into the live DOM. Only these known elements are trusted.
+  const selectors = [
+    '.marquee', '.controls', '.legend', '#main', '#fabAdd',
+    '#addModalOverlay', '#syncStatus', 'footer'
+  ];
+  const frag = document.createDocumentFragment();
+  selectors.forEach(sel=>{
+    const el = document.querySelector(sel);
+    if(!el) return;
+    const clone = el.cloneNode(true);
+    if(clone.id === 'main' || clone.id === 'syncStatus'){
+      clone.innerHTML = ''; // rebuilt by render() on load
+    }
+    if(clone.classList && clone.classList.contains('legend')){
+      // legend is static; keep as-is
+    }
+    if(clone.classList && clone.classList.contains('controls')){
+      const chipRow = clone.querySelector('#chipRow');
+      if(chipRow) chipRow.innerHTML = ''; // rebuilt by renderChips() on load
+      const search = clone.querySelector('#search');
+      if(search) search.value = '';
+    }
+    if(clone.id === 'addModalOverlay') clone.classList.add('hidden');
+    if(clone.classList && clone.classList.contains('marquee')){
+      const stats = clone.querySelector('#stats');
+      if(stats) stats.innerHTML = ''; // rebuilt by render() on load
+      const bulbs = clone.querySelector('#bulbs');
+      if(bulbs) bulbs.innerHTML = ''; // rebuilt by appMain() on load
+    }
+    frag.appendChild(clone);
   });
+  const dataScript = document.createElement('script');
+  dataScript.type = 'application/json';
+  dataScript.id = 'app-data';
+  dataScript.textContent = JSON.stringify({ overrides, customItems });
+  frag.appendChild(dataScript);
 
-  if(items.length === 0){
-    streamChecking = false;
-    setStreamStatus(`All ${allI.length} titles already checked. ${lastCheckLabel()}`);
+  const appScript = document.createElement('script');
+  appScript.id = 'app-script';
+  appScript.textContent = appMain.toString() + '\nappMain();';
+  frag.appendChild(appScript);
+
+  const wrap = document.createElement('div');
+  wrap.appendChild(frag);
+  return wrap.innerHTML;
+}
+function buildHTML(){
+  const headHTML = captureHead();
+  const bodyHTML = captureBodyChildren();
+  return '<!doctype html>\n<html lang="en">\n<head>\n' + headHTML + '\n</head>\n<body>\n' + bodyHTML + '\n</body>\n</html>';
+}
+async function persist(){
+  if(!(window.claude && window.claude.use)){
+    setSyncStatus('Preview only — open via your artifact link to save.', true);
     return;
   }
-
-  const batchSize = 5;
-  const totalBatches = Math.ceil(items.length / batchSize);
-  let failedBatches = 0;
-  let firstErrorMsg = null;
-  const maxAttempts = 4;
-
-  for(let b=0; b<totalBatches; b++){
-    const batch = items.slice(b*batchSize, b*batchSize+batchSize);
-    let succeeded = false;
-    let lastErr = null;
-
-    for(let attempt=0; attempt<maxAttempts && !succeeded; attempt++){
-      if(attempt === 0){
-        setStreamStatus(`Checking ${items.length} titles that need it… batch ${b+1}/${totalBatches}`);
-      } else {
-        const backoff = 2500 * Math.pow(2, attempt-1); // 2.5s, 5s, 10s
-        setStreamStatus(`Batch ${b+1}/${totalBatches}: server was overloaded, retrying in ${Math.round(backoff/1000)}s…`);
-        await new Promise(r=>setTimeout(r, backoff));
-      }
-      try{
-        const results = await lookupStreamingBatch(batch);
-        batch.forEach((item, idx)=>{
-          let r = results.find(x => x.title && x.title.trim().toLowerCase() === item.t.trim().toLowerCase());
-          if(!r) r = results[idx];
-          const key = slug(item.y+'-'+item.t);
-          streamCache[key] = {
-            primary: (r && r.primary) || null,
-            kind: (r && r.kind) || 'none',
-            checked: Date.now()
-          };
-        });
-        await saveStreamCache();
-        render();
-        succeeded = true;
-      }catch(e){
-        lastErr = e;
-        const retryable = e && (e.status === 529 || e.status === 429 || (e.status >= 500 && e.status < 600));
-        if(!retryable) break; // not a transient error — no point retrying
-      }
-    }
-
-    if(!succeeded){
-      failedBatches++;
-      if(!firstErrorMsg) firstErrorMsg = lastErr ? lastErr.message : 'unknown error';
-    }
-    await new Promise(r=>setTimeout(r, 1500));
+  let artifactApi;
+  try{ artifactApi = await window.claude.use('artifact'); }
+  catch(e){ artifactApi = null; }
+  if(!artifactApi){
+    setSyncStatus('Saving is unavailable in this view.', true);
+    return;
   }
-
-  streamChecking = false;
-  await saveStreamLastCheck();
-  let msg = lastCheckLabel();
-  if(failedBatches > 0) msg += ` (${failedBatches} of ${totalBatches} batches failed — error: "${firstErrorMsg}")`;
-  setStreamStatus(msg, failedBatches === totalBatches);
+  try{
+    await artifactApi.publish(buildHTML());
+    setSyncStatus('Saved — synced to every device.');
+  }catch(err){
+    if(err && err.code === 'conflict') return;
+    setSyncStatus('Save failed: ' + (err && err.message ? err.message : 'unknown error'), true);
+  }
 }
 
 /* ---------------- Bulbs ---------------- */
@@ -1131,13 +968,6 @@ function cardHTML(item){
   const score = (typeof item.s === 'number')
     ? `<span class="rt-score ${scoreClass(item.s)}">🍅 ${item.s}%</span>` : '';
   const key = slug(item.y+'-'+item.t);
-  const stream = streamCache[key];
-  let streamBadge = '';
-  if(stream && stream.kind === 'flatrate' && stream.primary){
-    streamBadge = `<span class="stream-badge on">📺 ${stream.primary}</span>`;
-  } else if(stream && stream.kind === 'rent'){
-    streamBadge = `<span class="stream-badge rent">🎟️ Rent/buy</span>`;
-  }
   const searchUrl = `https://www.google.com/search?q=${encodeURIComponent(item.t)}`;
   return `
   <div class="card ${w?'watched':''}" data-key="${key}">
@@ -1152,7 +982,6 @@ function cardHTML(item){
         ${tag}
       </div>
       <div class="card-desc">${item.d}</div>
-      ${streamBadge ? `<div class="stream-row">${streamBadge}</div>` : ''}
       <div class="card-meta">
         <span class="card-cat">${item.c}</span>
         <span style="display:flex; align-items:center; gap:6px;">
@@ -1184,6 +1013,8 @@ function render(){
     <div><b>${total-watchedCount}</b><span>up next</span></div>
   `;
   document.getElementById('filterCount').textContent = `${filtered.length} shown`;
+  const footerCount = document.getElementById('footerCount');
+  if(footerCount) footerCount.textContent = total;
 
   const main = document.getElementById('main');
   if(filtered.length===0){
@@ -1198,7 +1029,6 @@ function render(){
     <div class="type-rule"></div>`;
 
   if(state.watch==='watched'){
-    // Everything shown is already watched — just group by genre, no extra divider needed.
     const catsInOrder = Array.from(new Set(filtered.map(i=>i.c)));
     catsInOrder.forEach(cat=>{
       const group = filtered.filter(i=>i.c===cat).sort(byScoreDesc);
@@ -1259,19 +1089,14 @@ document.getElementById('watchToggle').addEventListener('click', (e)=>{
   state.watch = btn.dataset.watch;
   render();
 });
-document.getElementById('resetBtn').addEventListener('click', async ()=>{
+document.getElementById('resetBtn').addEventListener('click', ()=>{
   overrides = {};
-  await saveOverrides();
   render();
+  persist();
 });
 
 /* ---------------- Add-title modal ---------------- */
 const overlay = document.getElementById('addModalOverlay');
-const step1 = document.getElementById('modalStep1');
-const step2 = document.getElementById('modalStep2');
-const titleInput = document.getElementById('addTitleInput');
-const lookupBtn = document.getElementById('lookupBtn');
-const lookupStatus = document.getElementById('lookupStatus');
 const pvTitle = document.getElementById('pvTitle');
 const pvType = document.getElementById('pvType');
 const pvCat = document.getElementById('pvCat');
@@ -1287,21 +1112,23 @@ function populateCatOptions(type){
 function checkDuplicate(){
   const t = pvTitle.value.trim().toLowerCase();
   const ty = pvType.value;
-  const exists = allItems().some(i => i.y===ty && i.t.toLowerCase()===t);
+  const exists = t.length>0 && allItems().some(i => i.y===ty && i.t.toLowerCase()===t);
   dupWarning.classList.toggle('hidden', !exists);
   return exists;
 }
 function resetModal(){
-  titleInput.value = '';
-  lookupStatus.textContent = '';
-  lookupStatus.className = 'modal-status';
-  step1.classList.remove('hidden');
-  step2.classList.add('hidden');
+  pvTitle.value = '';
+  pvType.value = 'movie';
+  populateCatOptions('movie');
+  pvDesc.value = '';
+  pvScore.value = '';
+  pvWatched.checked = false;
+  dupWarning.classList.add('hidden');
 }
 function openModal(){
   resetModal();
   overlay.classList.remove('hidden');
-  setTimeout(()=>titleInput.focus(), 50);
+  setTimeout(()=>pvTitle.focus(), 50);
 }
 function closeModal(){
   overlay.classList.add('hidden');
@@ -1310,65 +1137,10 @@ function closeModal(){
 document.getElementById('fabAdd').addEventListener('click', openModal);
 document.getElementById('closeModal').addEventListener('click', closeModal);
 overlay.addEventListener('click', (e)=>{ if(e.target === overlay) closeModal(); });
-
-async function runLookup(){
-  const q = titleInput.value.trim();
-  if(!q){ titleInput.focus(); return; }
-  lookupBtn.disabled = true;
-  lookupStatus.className = 'modal-status';
-  lookupStatus.textContent = 'Searching…';
-  try{
-    const result = await lookupTitle(q);
-    lookupBtn.disabled = false;
-    if(!result || result.found === false){
-      lookupStatus.className = 'modal-status error';
-      lookupStatus.textContent = "Couldn't confidently identify that one — fill in the details below yourself.";
-      pvTitle.value = q;
-      pvType.value = 'movie';
-      populateCatOptions('movie');
-      pvDesc.value = '';
-      pvScore.value = '';
-    } else {
-      lookupStatus.textContent = '';
-      pvTitle.value = result.title || q;
-      pvType.value = (result.type === 'tv') ? 'tv' : 'movie';
-      populateCatOptions(pvType.value);
-      const cats = pvType.value === 'tv' ? TV_CATS : MOVIE_CATS;
-      pvCat.value = cats.includes(result.category) ? result.category : cats[0];
-      pvDesc.value = result.description || '';
-      pvScore.value = (typeof result.score === 'number') ? result.score : '';
-    }
-    pvWatched.checked = false;
-    step1.classList.add('hidden');
-    step2.classList.remove('hidden');
-    checkDuplicate();
-  }catch(err){
-    lookupBtn.disabled = false;
-    lookupStatus.className = 'modal-status error';
-    lookupStatus.textContent = "Lookup failed — you can still add it manually below.";
-    pvTitle.value = q;
-    pvType.value = 'movie';
-    populateCatOptions('movie');
-    pvDesc.value = '';
-    pvScore.value = '';
-    pvWatched.checked = false;
-    step1.classList.add('hidden');
-    step2.classList.remove('hidden');
-    checkDuplicate();
-  }
-}
-lookupBtn.addEventListener('click', runLookup);
-titleInput.addEventListener('keydown', (e)=>{ if(e.key==='Enter') runLookup(); });
-
-document.getElementById('lookupAgainBtn').addEventListener('click', ()=>{
-  step2.classList.add('hidden');
-  step1.classList.remove('hidden');
-  titleInput.focus();
-});
 pvType.addEventListener('change', ()=>{ populateCatOptions(pvType.value); checkDuplicate(); });
 pvTitle.addEventListener('input', checkDuplicate);
 
-document.getElementById('addConfirmBtn').addEventListener('click', async ()=>{
+document.getElementById('addConfirmBtn').addEventListener('click', ()=>{
   const t = pvTitle.value.trim();
   if(!t){ pvTitle.focus(); return; }
   if(checkDuplicate()) return;
@@ -1384,37 +1156,27 @@ document.getElementById('addConfirmBtn').addEventListener('click', async ()=>{
     s: (scoreVal === '' || isNaN(parsedScore)) ? null : Math.max(0, Math.min(100, parsedScore))
   };
   customItems.push(item);
-  await saveCustomItems();
   closeModal();
   state.type = item.y;
   state.cat = 'all';
   render();
-});
-
-/* ---------------- Streaming check modal ---------------- */
-const streamOverlay = document.getElementById('streamModalOverlay');
-
-function openStreamModal(){
-  setStreamStatus(lastCheckLabel());
-  streamOverlay.classList.remove('hidden');
-}
-function closeStreamModal(){ streamOverlay.classList.add('hidden'); }
-
-document.getElementById('fabStream').addEventListener('click', openStreamModal);
-document.getElementById('closeStreamModal').addEventListener('click', closeStreamModal);
-streamOverlay.addEventListener('click', (e)=>{ if(e.target === streamOverlay) closeStreamModal(); });
-
-document.getElementById('checkNowBtn').addEventListener('click', async ()=>{
-  await checkStreaming();
+  persist();
 });
 
 /* ---------------- Init ---------------- */
-(async function init(){
-  await loadOverrides();
-  await loadCustomItems();
-  await loadStreamState();
+(function init(){
+  try{
+    const raw = document.getElementById('app-data').textContent;
+    const parsed = JSON.parse(raw);
+    overrides = parsed.overrides || {};
+    customItems = parsed.customItems || [];
+  }catch(e){ overrides = {}; customItems = []; }
+  populateCatOptions('movie');
   render();
 })();
+
+}
+appMain();
 </script>
 </body>
 </html>
