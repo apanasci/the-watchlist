@@ -65,7 +65,19 @@ titles that only exist on the live version.
 
 ## Related
 
-[streaming-tracker](../streaming-tracker) is a separate local tool that
-checks this app's title list against TMDb for US streaming availability
-changes — intentionally not part of this app, since it needs an API key
-that can't safely live in client-side page source.
+[streaming-tracker](../streaming-tracker) is a separate tool (including a
+monthly GitHub Actions job) that checks this app's title list against TMDb
+and the Streaming Availability API for US streaming changes — intentionally
+not part of this app, since it needs API keys that can't safely live in
+client-side page source.
+
+**⚠️ It reads this repo's committed `ITEMS` array on GitHub, not the live
+app above.** Titles added through the "+" button live only in this
+Artifact's `customItems` data until this repo's `index.html` is manually
+updated and pushed to GitHub — streaming-tracker's automation has no way to
+read the live app directly (a GitHub Actions runner isn't logged into
+claude.ai). Add titles via the app as usual, but if you want them included
+in the streaming brief, ask Claude to sync the live `customItems`/overrides
+into this repo's `ITEMS` array and push before the next check — otherwise
+the tracker keeps silently checking an ever-more-outdated list. See
+streaming-tracker's README for the full explanation.
