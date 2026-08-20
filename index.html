@@ -373,21 +373,6 @@
   .card.watched .watch-btn{
     background:var(--teal); color:var(--paper); border-color:var(--teal);
   }
-  .stamp{
-    position:absolute;
-    top:8px; right:10px;
-    font-family:'IBM Plex Mono', monospace;
-    font-size:10px;
-    font-weight:600;
-    letter-spacing:.12em;
-    color:var(--rust);
-    border:1.5px solid var(--rust);
-    border-radius:4px;
-    padding:2px 6px;
-    transform:rotate(9deg);
-    opacity:.85;
-    pointer-events:none;
-  }
 
   .empty-msg{
     font-family:'IBM Plex Mono', monospace;
@@ -541,19 +526,25 @@
   }
   .card.pending .card-desc{ font-style:italic; color:var(--muted); }
   .del-btn{
+    position:absolute;
+    top:5px; right:7px;
+    z-index:2;
     font-family:'IBM Plex Mono', monospace;
-    font-size:11px;
+    font-size:12px;
     line-height:1;
-    color:var(--muted);
-    border:1px solid rgba(34,29,21,0.2);
+    color:var(--ink-soft);
+    border:none;
     border-radius:6px;
-    padding:4px 7px;
+    padding:4px 6px;
     background:transparent;
     cursor:pointer;
-    transition:transform .1s ease;
+    opacity:.5;
+    transition:opacity .12s ease, color .12s ease, transform .1s ease;
   }
-  .del-btn:hover{ border-color:var(--rust); color:var(--rust); }
-  .del-btn:active{ transform:scale(0.94); }
+  .del-btn:hover{ color:var(--rust); opacity:1; }
+  .del-btn:active{ transform:scale(0.9); }
+  /* Keep the title and tag clear of the corner button. */
+  .card-top{ padding-right:20px; }
   .modal-btn.danger{
     background:var(--rust-dark); border-color:var(--rust-dark); color:var(--paper);
   }
@@ -1293,21 +1284,6 @@ const HEAD_SOURCE = `<meta charset="UTF-8">
   .card.watched .watch-btn{
     background:var(--teal); color:var(--paper); border-color:var(--teal);
   }
-  .stamp{
-    position:absolute;
-    top:8px; right:10px;
-    font-family:'IBM Plex Mono', monospace;
-    font-size:10px;
-    font-weight:600;
-    letter-spacing:.12em;
-    color:var(--rust);
-    border:1.5px solid var(--rust);
-    border-radius:4px;
-    padding:2px 6px;
-    transform:rotate(9deg);
-    opacity:.85;
-    pointer-events:none;
-  }
 
   .empty-msg{
     font-family:'IBM Plex Mono', monospace;
@@ -1461,19 +1437,25 @@ const HEAD_SOURCE = `<meta charset="UTF-8">
   }
   .card.pending .card-desc{ font-style:italic; color:var(--muted); }
   .del-btn{
+    position:absolute;
+    top:5px; right:7px;
+    z-index:2;
     font-family:'IBM Plex Mono', monospace;
-    font-size:11px;
+    font-size:12px;
     line-height:1;
-    color:var(--muted);
-    border:1px solid rgba(34,29,21,0.2);
+    color:var(--ink-soft);
+    border:none;
     border-radius:6px;
-    padding:4px 7px;
+    padding:4px 6px;
     background:transparent;
     cursor:pointer;
-    transition:transform .1s ease;
+    opacity:.5;
+    transition:opacity .12s ease, color .12s ease, transform .1s ease;
   }
-  .del-btn:hover{ border-color:var(--rust); color:var(--rust); }
-  .del-btn:active{ transform:scale(0.94); }
+  .del-btn:hover{ color:var(--rust); opacity:1; }
+  .del-btn:active{ transform:scale(0.9); }
+  /* Keep the title and tag clear of the corner button. */
+  .card-top{ padding-right:20px; }
   .modal-btn.danger{
     background:var(--rust-dark); border-color:var(--rust-dark); color:var(--paper);
   }
@@ -1658,7 +1640,7 @@ function cardHTML(item){
   const searchUrl = `https://www.google.com/search?q=${encodeURIComponent(item.t)}`;
   return `
   <div class="card ${w?'watched':''}" data-key="${key}">
-    ${w?'<div class="stamp">seen</div>':''}
+    <button class="del-btn" data-key="${key}" aria-label="Remove ${item.t}" title="Remove from watchlist">✕</button>
     <div class="stub">
       <div class="stub-icon">${CAT_ICON[item.c]||'🎟️'}</div>
       <div class="stub-label">${item.y==='tv'?'TV':'FILM'}</div>
@@ -1674,7 +1656,6 @@ function cardHTML(item){
         <span style="display:flex; align-items:center; gap:6px;">
           ${score}
           <button class="watch-btn" data-key="${key}">${w?'✓ watched':'mark seen'}</button>
-          <button class="del-btn" data-key="${key}" aria-label="Remove ${item.t}" title="Remove from watchlist">✕</button>
         </span>
       </div>
     </div>
@@ -1687,7 +1668,7 @@ function pendingCardHTML(item){
   const searchUrl = `https://www.google.com/search?q=${encodeURIComponent(item.t)}`;
   return `
   <div class="card pending ${w?'watched':''}">
-    ${w?'<div class="stamp">seen</div>':''}
+    <button class="del-btn" data-key="${itemKey(item)}" aria-label="Remove ${item.t}" title="Remove from watchlist">✕</button>
     <div class="stub">
       <div class="stub-icon">⏳</div>
       <div class="stub-label">NEW</div>
@@ -1697,10 +1678,6 @@ function pendingCardHTML(item){
         <div class="card-title"><a href="${searchUrl}" target="_blank" rel="noopener" class="title-link">${item.t}</a></div>
       </div>
       <div class="card-desc">Looking up genre, description, and Tomatometer — filled in on the next sync.</div>
-      <div class="card-meta">
-        <span class="card-cat">pending</span>
-        <button class="del-btn" data-key="${itemKey(item)}" aria-label="Remove ${item.t}" title="Remove from watchlist">✕</button>
-      </div>
     </div>
   </div>`;
 }
