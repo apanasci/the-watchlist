@@ -10,9 +10,51 @@ with "mark seen" tracking and a manual add-title form.
 
 - Filter by Film/TV, genre, and watched status; free-text search
 - Films ranked by Rotten Tomatoes score within each genre; watched titles sink to the bottom
-- Manual "add a title" form (name, type, genre, description, RT score, watched)
+- "Add a title" takes **just the name** — film vs TV, genre, description, and
+  Tomatometer are looked up afterwards (see below)
 - Tapping a title searches it on Google
 - Watched status and added titles sync across every device that opens the link
+
+## Adding a title, and where the details come from
+
+The page can't look anything up itself. A published Artifact runs under a
+strict CSP with no outbound network access, so there is no way for the app
+to call TMDb, Google, or anything else at the moment you add something.
+
+So adding is two-phase:
+
+1. You type a title. It's saved immediately with `p:true` and shown in an
+   "Awaiting details" section, visible in both the Film and TV tabs.
+2. `enrich_pending.py` runs out of band and fills in the rest:
+
+   | Field | Source |
+   |---|---|
+   | film vs TV (`y`) | TMDb search |
+   | genre (`c`) | TMDb genres, mapped onto this app's own taxonomy |
+   | description (`d`) | first sentence of TMDb's overview |
+   | Tomatometer (`s`) | OMDb, keyed by the IMDb id TMDb returns |
+
+Rotten Tomatoes has no public API; OMDb re-publishes the score and is the
+only free source for it. **Without `OMDB_API_KEY` set, titles are filed with
+no 🍅 score** rather than TMDb's own rating, which is a different number and
+would be wrong under a Tomatometer label. Free key:
+https://www.omdbapi.com/apikey.aspx
+
+Genre mapping is best-effort — a title can land in a defensible but not
+ideal bucket. Ask Claude to move it and it'll edit the entry directly.
+
+```bash
+export TMDB_BEARER_TOKEN=...
+export OMDB_API_KEY=...          # optional; without it, no 🍅 scores
+python3 enrich_pending.py app_data.json   # fill in the blanks
+python3 sync_customitems.py app_data.json # promote into ITEMS
+```
+
+`sync_customitems.py` *promotes*: enriched items move into `ITEMS` and out
+of `customItems`. They must never be in both — the app renders
+`ITEMS.concat(customItems)`, so anything in both shows up twice. Items that
+found no TMDb match stay in `customItems` for the next run rather than being
+promoted with no type or genre, which would make them unrenderable.
 
 ## How it's built
 
