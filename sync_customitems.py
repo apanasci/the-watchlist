@@ -39,6 +39,12 @@ APP_DATA_RE = re.compile(
 FIELDS = ("y", "c", "t", "d", "w", "g", "s")
 
 
+def slug(item):
+    """Same key the app builds with slug(y + '-' + t)."""
+    raw = f"{item.get('y')}-{item.get('t')}".lower()
+    return re.sub(r"(^-|-$)", "", re.sub(r"[^a-z0-9]+", "-", raw))
+
+
 def format_item(item):
     fields = ", ".join(
         f"{key}:{json.dumps(item.get(key), ensure_ascii=False)}" for key in FIELDS
@@ -80,6 +86,17 @@ def main():
             by_key[key] = clean
             added += 1
 
+    # A title deleted in the app is suppressed there by key. Once it's
+    # physically dropped from the synced block it no longer needs
+    # suppressing, and dropping it here is also what stops streaming-tracker
+    # from going on checking a title that's been removed. Built-in titles
+    # are hand-authored elsewhere in ITEMS, so those keys have to stay.
+    deleted_keys = set(app_data.get("deleted", []))
+    removed = [k for k, i in by_key.items() if slug(i) in deleted_keys]
+    for key in removed:
+        del by_key[key]
+    still_suppressed = sorted(deleted_keys - {slug(i) for i in synced})
+
     merged = list(by_key.values())
     new_block = "\n".join([START_MARKER] + [format_item(i) for i in merged] + [END_MARKER])
 
@@ -95,7 +112,11 @@ def main():
 
     # Promoted items now live in ITEMS, so they must be dropped from the
     # app-data blob or the app would render each of them twice.
-    new_app_data = {"overrides": app_data.get("overrides", {}), "customItems": still_pending}
+    new_app_data = {
+        "overrides": app_data.get("overrides", {}),
+        "customItems": still_pending,
+        "deleted": still_suppressed,
+    }
     if not APP_DATA_RE.search(updated_src):
         print("Could not find the app-data script tag in index.html", file=sys.stderr)
         sys.exit(1)
@@ -110,8 +131,9 @@ def main():
     INDEX_HTML.write_text(updated_src)
     data_path.write_text(json.dumps(new_app_data, indent=2))
     print(
-        f"synced: {added} added, {updated} updated, {len(merged)} total in ITEMS; "
-        f"{len(still_pending)} still pending"
+        f"synced: {added} added, {updated} updated, {len(removed)} removed, "
+        f"{len(merged)} total in ITEMS; {len(still_pending)} still pending, "
+        f"{len(still_suppressed)} built-in title(s) suppressed"
     )
 
 

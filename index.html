@@ -540,6 +540,30 @@
     border-right-color:rgba(34,29,21,0.2);
   }
   .card.pending .card-desc{ font-style:italic; color:var(--muted); }
+  .del-btn{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:11px;
+    line-height:1;
+    color:var(--muted);
+    border:1px solid rgba(34,29,21,0.2);
+    border-radius:6px;
+    padding:4px 7px;
+    background:transparent;
+    cursor:pointer;
+    transition:transform .1s ease;
+  }
+  .del-btn:hover{ border-color:var(--rust); color:var(--rust); }
+  .del-btn:active{ transform:scale(0.94); }
+  .modal-btn.danger{
+    background:var(--rust-dark); border-color:var(--rust-dark); color:var(--paper);
+  }
+  .confirm-text{
+    font-family:'Inter', sans-serif;
+    font-size:15px;
+    line-height:1.5;
+    color:var(--ink);
+    margin:6px 0 0;
+  }
   .sync-toast{
     position:fixed; left:50%; bottom:24px; transform:translateX(-50%) translateY(20px);
     background:var(--ink); color:var(--paper);
@@ -609,6 +633,23 @@
       <div id="dupWarning" class="modal-status hidden">This title looks like it's already on your list.</div>
       <div class="modal-actions">
         <button id="addConfirmBtn" class="modal-btn primary">Add to list</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="confirmOverlay" class="modal-overlay hidden">
+  <div class="modal">
+    <div class="modal-header">
+      <span>Remove title</span>
+      <button id="confirmClose" class="modal-close" aria-label="Close">&times;</button>
+    </div>
+    <div class="modal-body">
+      <p class="confirm-text">Remove <strong id="confirmTitle"></strong> from the watchlist?</p>
+      <p class="modal-hint" id="confirmNote"></p>
+      <div class="modal-actions">
+        <button id="confirmCancel" class="modal-btn">Cancel</button>
+        <button id="confirmDelete" class="modal-btn danger">Remove</button>
       </div>
     </div>
   </div>
@@ -824,9 +865,18 @@ const TV_CATS = ["Drama","Comedy","Thriller & Crime","Sci-Fi","Reality"];
 /* ---------------- State ---------------- */
 let overrides = {};
 let customItems = [];
+// Built-in titles live inside this function's own source, which is what
+// gets re-serialized on save, so they can't be deleted by splicing the
+// array — the source text would still list them. They're suppressed by key
+// instead. Titles added through the app are just data, so those are
+// removed outright rather than accumulating here forever.
+let deleted = [];
 let state = { type:"movie", cat:"all", q:"", watch:"all" };
 
-function allItems(){ return ITEMS.concat(customItems); }
+function itemKey(item){ return slug(item.y+'-'+item.t); }
+function allItems(){
+  return ITEMS.concat(customItems).filter(i=>!deleted.includes(itemKey(i)));
+}
 
 function slug(t){ return t.toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/(^-|-$)/g,''); }
 function isWatched(item){
@@ -836,6 +886,21 @@ function isWatched(item){
 function toggleWatched(item){
   const k = slug(item.y+'-'+item.t);
   overrides[k] = !isWatched(item);
+  render();
+  persist();
+}
+function isCustom(item){
+  return customItems.some(i=>i.t===item.t && i.y===item.y);
+}
+function deleteItem(item){
+  const k = itemKey(item);
+  const idx = customItems.findIndex(i=>i.t===item.t && i.y===item.y);
+  if(idx !== -1){
+    customItems.splice(idx, 1);
+  } else if(!deleted.includes(k)){
+    deleted.push(k);
+  }
+  delete overrides[k];
   render();
   persist();
 }
@@ -1395,6 +1460,30 @@ const HEAD_SOURCE = `<meta charset="UTF-8">
     border-right-color:rgba(34,29,21,0.2);
   }
   .card.pending .card-desc{ font-style:italic; color:var(--muted); }
+  .del-btn{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:11px;
+    line-height:1;
+    color:var(--muted);
+    border:1px solid rgba(34,29,21,0.2);
+    border-radius:6px;
+    padding:4px 7px;
+    background:transparent;
+    cursor:pointer;
+    transition:transform .1s ease;
+  }
+  .del-btn:hover{ border-color:var(--rust); color:var(--rust); }
+  .del-btn:active{ transform:scale(0.94); }
+  .modal-btn.danger{
+    background:var(--rust-dark); border-color:var(--rust-dark); color:var(--paper);
+  }
+  .confirm-text{
+    font-family:'Inter', sans-serif;
+    font-size:15px;
+    line-height:1.5;
+    color:var(--ink);
+    margin:6px 0 0;
+  }
   .sync-toast{
     position:fixed; left:50%; bottom:24px; transform:translateX(-50%) translateY(20px);
     background:var(--ink); color:var(--paper);
@@ -1467,6 +1556,23 @@ const BODY_SHELL_SOURCE = `
   </div>
 </div>
 
+<div id="confirmOverlay" class="modal-overlay hidden">
+  <div class="modal">
+    <div class="modal-header">
+      <span>Remove title</span>
+      <button id="confirmClose" class="modal-close" aria-label="Close">&times;</button>
+    </div>
+    <div class="modal-body">
+      <p class="confirm-text">Remove <strong id="confirmTitle"></strong> from the watchlist?</p>
+      <p class="modal-hint" id="confirmNote"></p>
+      <div class="modal-actions">
+        <button id="confirmCancel" class="modal-btn">Cancel</button>
+        <button id="confirmDelete" class="modal-btn danger">Remove</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <div id="syncStatus" class="sync-toast"></div>
 
 <footer>
@@ -1475,7 +1581,7 @@ const BODY_SHELL_SOURCE = `
 </footer>
 `;
 function buildHTML(){
-  const dataJSON = JSON.stringify({ overrides, customItems });
+  const dataJSON = JSON.stringify({ overrides, customItems, deleted });
   const appScriptSrc = appMain.toString() + '\nappMain();';
   return '<!doctype html>\n<html lang="en">\n<head>\n' + HEAD_SOURCE + '\n</head>\n<body>\n' + BODY_SHELL_SOURCE
     + '\n<script type="application/json" id="app-data">' + dataJSON + '<\/script>\n'
@@ -1568,6 +1674,7 @@ function cardHTML(item){
         <span style="display:flex; align-items:center; gap:6px;">
           ${score}
           <button class="watch-btn" data-key="${key}">${w?'✓ watched':'mark seen'}</button>
+          <button class="del-btn" data-key="${key}" aria-label="Remove ${item.t}" title="Remove from watchlist">✕</button>
         </span>
       </div>
     </div>
@@ -1590,6 +1697,10 @@ function pendingCardHTML(item){
         <div class="card-title"><a href="${searchUrl}" target="_blank" rel="noopener" class="title-link">${item.t}</a></div>
       </div>
       <div class="card-desc">Looking up genre, description, and Tomatometer — filled in on the next sync.</div>
+      <div class="card-meta">
+        <span class="card-cat">pending</span>
+        <button class="del-btn" data-key="${itemKey(item)}" aria-label="Remove ${item.t}" title="Remove from watchlist">✕</button>
+      </div>
     </div>
   </div>`;
 }
@@ -1632,6 +1743,7 @@ function render(){
 
   if(filtered.length===0){
     main.innerHTML = html + `<div class="empty-msg">No tickets match that search. Try another title or clear the filters.</div>`;
+    wireCards(main);
     return;
   }
 
@@ -1673,13 +1785,22 @@ function render(){
   html += `</section>`;
 
   main.innerHTML = html;
+  wireCards(main);
+}
 
+function wireCards(main){
   main.querySelectorAll('.watch-btn').forEach(btn=>{
     btn.addEventListener('click', (e)=>{
       e.stopPropagation();
-      const key = btn.dataset.key;
-      const item = allItems().find(i=>slug(i.y+'-'+i.t)===key);
+      const item = allItems().find(i=>itemKey(i)===btn.dataset.key);
       if(item) toggleWatched(item);
+    });
+  });
+  main.querySelectorAll('.del-btn').forEach(btn=>{
+    btn.addEventListener('click', (e)=>{
+      e.stopPropagation();
+      const item = allItems().find(i=>itemKey(i)===btn.dataset.key);
+      if(item) askDelete(item);
     });
   });
 }
@@ -1754,6 +1875,38 @@ document.getElementById('addConfirmBtn').addEventListener('click', ()=>{
   persist();
 });
 
+/* ---------------- Delete confirmation ---------------- */
+const confirmOverlay = document.getElementById('confirmOverlay');
+let itemAwaitingDelete = null;
+
+function askDelete(item){
+  itemAwaitingDelete = item;
+  document.getElementById('confirmTitle').textContent = item.t;
+  document.getElementById('confirmNote').textContent = isCustom(item)
+    ? 'It was added through this app, so removing it deletes it outright.'
+    : 'It stays removed on every device. Ask Claude if you ever want it back.';
+  confirmOverlay.classList.remove('hidden');
+  setTimeout(()=>document.getElementById('confirmCancel').focus(), 50);
+}
+function closeConfirm(){
+  itemAwaitingDelete = null;
+  confirmOverlay.classList.add('hidden');
+}
+
+document.getElementById('confirmCancel').addEventListener('click', closeConfirm);
+document.getElementById('confirmClose').addEventListener('click', closeConfirm);
+confirmOverlay.addEventListener('click', (e)=>{ if(e.target === confirmOverlay) closeConfirm(); });
+document.getElementById('confirmDelete').addEventListener('click', ()=>{
+  if(!itemAwaitingDelete) return;
+  const item = itemAwaitingDelete;
+  closeConfirm();
+  deleteItem(item);
+  setSyncStatus(`Removed “${item.t}”.`);
+});
+document.addEventListener('keydown', (e)=>{
+  if(e.key === 'Escape' && !confirmOverlay.classList.contains('hidden')) closeConfirm();
+});
+
 /* ---------------- Init ---------------- */
 (function init(){
   try{
@@ -1761,7 +1914,8 @@ document.getElementById('addConfirmBtn').addEventListener('click', ()=>{
     const parsed = JSON.parse(raw);
     overrides = parsed.overrides || {};
     customItems = parsed.customItems || [];
-  }catch(e){ overrides = {}; customItems = []; }
+    deleted = parsed.deleted || [];
+  }catch(e){ overrides = {}; customItems = []; deleted = []; }
   render();
 })();
 
