@@ -205,8 +205,10 @@ def main():
     pending = [i for i in items if needs_enrichment(i)]
 
     if not pending:
+        # Distinct exit code so the automatic routine can tell "nothing to do"
+        # from "worked", and skip republishing instead of churning versions.
         print("Nothing to enrich.")
-        return
+        sys.exit(3)
 
     failures = []
     for item in pending:
