@@ -72,8 +72,13 @@ does exactly the sequence above on its own:
 3. Publishes the result back to the live artifact.
 4. Commits and pushes to this repo.
 
-It only pushes/publishes when it actually enriched something — a run that
-finds nothing pending exits quietly, no commit, no notification. It only
+It only pushes/publishes when a title actually became promotable — a
+pending item (`p:true`) has no type or genre yet, so it can't be promoted
+into `ITEMS` as-is, and a run that finds nothing pending, or fails to match
+anything on TMDb, exits quietly with no commit and no notification. This
+isn't a data-loss risk: adding a title already saves it live the instant
+you hit "Add," independent of this task entirely — there's just nothing
+new *for GitHub* until something's enriched enough to be promoted. It only
 runs while the Claude desktop app is open; if your Mac was off when the
 weekly time came around, it just runs once on next launch instead — no
 titles are lost, just delayed. Ask Claude to enrich on demand anytime you
