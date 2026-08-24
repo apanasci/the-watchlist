@@ -16,14 +16,6 @@ with "mark seen" tracking and a manual add-title form.
 - Tapping a title searches it on Google
 - Watched status and added titles sync across every device that opens the link
 
-## Files
-
-- `index.html` — the entire app; see "How it's built" below
-- `enrich_pending.py` — looks up film/TV, genre, description, Tomatometer for pending titles
-- `sync_customitems.py` — promotes enriched titles from `customItems` into the committed `ITEMS` array
-- `synced_items.json` — the promoted titles' source of truth, so re-running the sync updates in place rather than duplicating
-- `set_app_data.py` — **unused.** Built for an earlier attempt at automation (a scheduled *cloud* job) that turned out not to work — see "This runs automatically" below for why, and what replaced it. Left in place only as a record of that dead end; nothing calls it. Safe to delete.
-
 ## Adding a title, and where the details come from
 
 The page can't look anything up itself. A published Artifact runs under a
@@ -52,25 +44,6 @@ https://www.omdbapi.com/apikey.aspx
 Genre mapping is best-effort — a title can land in a defensible but not
 ideal bucket. Ask Claude to move it and it'll edit the entry directly.
 
-## Removing a title
-
-Every card has a small ✕ in its top-right corner, which asks for
-confirmation before removing anything — there's no undo, so nothing is
-ever deleted from a single tap.
-
-What removal actually does depends on where the title came from:
-
-- **Added through the app:** deleted outright — it's spliced out of
-  `customItems` (or out of the promoted block in `ITEMS`, if it had already
-  been enriched) and gone for good.
-- **One of the 174 built-in titles:** these live inside `appMain`'s own
-  source text, which is exactly what gets re-serialized on every save — so
-  splicing it out of the array wouldn't work, the source text would still
-  list it. It's suppressed by key instead, recorded in a `deleted` array in
-  `app-data`. Recoverable (ask Claude), unlike an app-added title.
-
-The dialog tells you which case you're in before you confirm.
-
 ```bash
 export TMDB_BEARER_TOKEN=...
 export OMDB_API_KEY=...          # optional; without it, no 🍅 scores
@@ -87,8 +60,8 @@ promoted with no type or genre, which would make them unrenderable.
 ### This runs automatically — you don't need to do the above by hand
 
 A scheduled task named **watchlist-auto-enrich**, set up in the Claude
-desktop app (Settings → Scheduled, or ask Claude), runs weekly and does
-exactly the sequence above on its own:
+desktop app's "Scheduled" sidebar section (or ask Claude), runs weekly and
+does exactly the sequence above on its own:
 
 1. Reads the live app's current `app-data`. This has to happen through a
    real, logged-in Claude session — a plain script hitting that URL gets
@@ -119,6 +92,33 @@ with both an authenticated session *and* unrestricted outbound network.
 > which runs in GitHub's cloud on its own schedule and fires whether your
 > Mac is on, off, or asleep — that was deliberately built cloud-side so it
 > wouldn't share this dependency.
+
+## Removing a title
+
+Every card has a small ✕ in its top-right corner, which asks for
+confirmation before removing anything — there's no undo, so nothing is
+ever deleted from a single tap.
+
+What removal actually does depends on where the title came from:
+
+- **Added through the app:** deleted outright — it's spliced out of
+  `customItems` (or out of the promoted block in `ITEMS`, if it had already
+  been enriched) and gone for good.
+- **One of the 174 built-in titles:** these live inside `appMain`'s own
+  source text, which is exactly what gets re-serialized on every save — so
+  splicing it out of the array wouldn't work, the source text would still
+  list it. It's suppressed by key instead, recorded in a `deleted` array in
+  `app-data`. Recoverable (ask Claude), unlike an app-added title.
+
+The dialog tells you which case you're in before you confirm.
+
+## Files
+
+- `index.html` — the entire app; see "How it's built" below
+- `enrich_pending.py` — looks up film/TV, genre, description, Tomatometer for pending titles
+- `sync_customitems.py` — promotes enriched titles from `customItems` into the committed `ITEMS` array
+- `synced_items.json` — the promoted titles' source of truth, so re-running the sync updates in place rather than duplicating
+- `set_app_data.py` — **unused.** Built for an earlier attempt at automation (a scheduled *cloud* job) that turned out not to work — see "This runs automatically" above for why, and what replaced it. Left in place only as a record of that dead end; nothing calls it. Safe to delete.
 
 ## How it's built
 
