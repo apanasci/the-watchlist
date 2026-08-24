@@ -112,6 +112,14 @@ from reaching `api.themoviedb.org`, so it can do the "read the live app"
 half but not the "look up the details" half. Local is the only environment
 with both an authenticated session *and* unrestricted outbound network.
 
+> **This is the one machine-dependent piece in the whole system.**
+> `watchlist-auto-enrich` only runs while your Mac is on and the Claude
+> desktop app is open (or it catches up on next launch). Contrast with
+> [streaming-tracker's monthly email](../streaming-tracker/README.md#monthly-email-via-github-actions),
+> which runs in GitHub's cloud on its own schedule and fires whether your
+> Mac is on, off, or asleep — that was deliberately built cloud-side so it
+> wouldn't share this dependency.
+
 ## How it's built
 
 Single self-contained HTML file (`index.html`) — no build step, no server,
