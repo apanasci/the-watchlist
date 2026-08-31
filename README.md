@@ -59,6 +59,13 @@ promoted with no type or genre, which would make them unrenderable.
 
 ### This runs automatically — you don't need to do the above by hand
 
+**"Automatic" here means self-triggering, not unconditional** — this only
+runs while your Mac is on and the Claude desktop app is open. If it's off
+when the weekly time comes around, nothing is lost; it just runs once on
+next launch instead. See the callout at the end of this section for how
+that contrasts with streaming-tracker's monthly email, which has no such
+dependency.
+
 A scheduled task named **watchlist-auto-enrich**, set up in the Claude
 desktop app's "Scheduled" sidebar section (or ask Claude), runs weekly and
 does exactly the sequence above on its own:
@@ -78,11 +85,8 @@ into `ITEMS` as-is, and a run that finds nothing pending, or fails to match
 anything on TMDb, exits quietly with no commit and no notification. This
 isn't a data-loss risk: adding a title already saves it live the instant
 you hit "Add," independent of this task entirely — there's just nothing
-new *for GitHub* until something's enriched enough to be promoted. It only
-runs while the Claude desktop app is open; if your Mac was off when the
-weekly time came around, it just runs once on next launch instead — no
-titles are lost, just delayed. Ask Claude to enrich on demand anytime you
-don't want to wait for the schedule.
+new *for GitHub* until something's enriched enough to be promoted. Ask
+Claude to enrich on demand anytime you don't want to wait for the schedule.
 
 **Why not a scheduled cloud job instead of a local one?** Tried first,
 doesn't work: a cloud sandbox's network can reach GitHub but is blocked
