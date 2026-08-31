@@ -18,19 +18,91 @@
     "s": null
   },
   {
-    "y": "movie",
-    "c": "Drama",
-    "t": "Rocky",
-    "d": "Rocky Balboa is a Philadelphia club fighter who seems to be going nowhere.",
-    "w": false,
-    "g": null,
-    "s": 93
-  },
-  {
     "y": "tv",
     "c": "Thriller & Crime",
     "t": "Sterling Point",
     "d": "After discovering she's inherited a remote island in Canada from the estranged grandfather she was never allowed to meet, 17-year-old Annie Jacobson…",
+    "w": false,
+    "g": null,
+    "s": null
+  },
+  {
+    "y": "movie",
+    "c": "Drama",
+    "t": "The Buddy Holly Story",
+    "d": "A chronicle of the rise and brief career of rock 'n' roll star Buddy Holly, who aspires to play music the way he wants it to sound.",
+    "w": false,
+    "g": null,
+    "s": 100
+  },
+  {
+    "y": "movie",
+    "c": "Drama",
+    "t": "Coal Miner’s Daughter",
+    "d": "Biography of Loretta Lynn, a country and western singer that came from poverty to fame.",
+    "w": false,
+    "g": null,
+    "s": 84
+  },
+  {
+    "y": "movie",
+    "c": "Drama",
+    "t": "Amadeus",
+    "d": "Disciplined Italian composer Antonio Salieri becomes consumed by jealousy and resentment towards the hedonistic and remarkably talented young…",
+    "w": false,
+    "g": null,
+    "s": 90
+  },
+  {
+    "y": "movie",
+    "c": "Drama",
+    "t": "What’s Love Got To Do With It",
+    "d": "Singer Tina Turner rises to stardom while mustering the courage to break free from her abusive husband Ike.",
+    "w": false,
+    "g": null,
+    "s": 97
+  },
+  {
+    "y": "movie",
+    "c": "Comedy",
+    "t": "24 Hour Party People",
+    "d": "Manchester, 1976.",
+    "w": false,
+    "g": null,
+    "s": null
+  },
+  {
+    "y": "movie",
+    "c": "Romance",
+    "t": "Behind the Candelabra",
+    "d": "Based on the autobiographical novel, the tempestuous 6-year relationship between Liberace and his (much younger) lover, Scott Thorson, is recounted.",
+    "w": false,
+    "g": null,
+    "s": 94
+  },
+  {
+    "y": "movie",
+    "c": "Romance",
+    "t": "Sing Street",
+    "d": "A boy growing up in Dublin during the 1980s escapes his strained family life by starting a band to impress the mysterious girl he likes.",
+    "w": false,
+    "g": null,
+    "s": 95
+  },
+  {
+    "y": "tv",
+    "c": "Drama",
+    "t": "The Broken Hearts Club",
+    "d": "The series revolves around a group of people who have several intertwined human relationships, and it also discusses issues related to the Egyptian…",
+    "w": false,
+    "g": null,
+    "s": null
+  },
+  {
+    "y": "tv",
+    "c": "Thriller & Crime",
+    "t": "Trick",
+    "d": "Although 23 year old Yamada Naoko is a \"super\" magician, she is continously fired and constantly hounded by her landlady for the rent being late.",
     "w": false,
     "g": null,
     "s": null
